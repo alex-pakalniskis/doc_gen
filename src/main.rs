@@ -1,55 +1,44 @@
 use serde_yaml;
-use serde_yaml::Sequence;
-use serde::Deserialize;
-use std::collections::HashMap;
-
-#[allow(non_snake_case)]
-#[derive(Debug, Deserialize, PartialEq)]
-struct Yml {
-    dataSources: Vec<DataSource>
-}
-
-#[derive(Debug, Deserialize, PartialEq)]
-struct DataSource {
-    kind: String,
-    mapping: Mapping,
-    name: String,
-    network: String,
-    source: Source
-}
-
-#[allow(non_snake_case)]
-#[derive(Debug, Deserialize, PartialEq)]
-struct Mapping {
-    abis: Sequence,
-    apiVersion: String,
-    entities: Sequence,
-    eventHandlers: Sequence,
-    file: HashMap<String, String>,
-    kind: String,
-    language: String
-}
-
-#[allow(non_snake_case)]
-#[derive(Debug, Deserialize, PartialEq)]
-struct Source {
-    abi: String,
-    address: String,
-    startBlock: u32
-}
-
-
+use std::string::String;
+use graphql_parser::schema::parse_schema;
+use graphql_parser::schema::Definition::TypeDefinition;
+use graphql_parser::schema::TypeDefinition::{Scalar, Object, Interface, Union, Enum, InputObject};
+mod ipfs;
+use ipfs::structs::SubgraphManifest;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let resp = reqwest::get("https://ipfs.io/ipfs/Qmbzn47G3NBgHuDyFqXaf646SCRz2CK93VBkUD3AV7nGtk")
+
+    let manifest_response = reqwest::get("https://ipfs.io/ipfs/QmVsp1bC9rS3rf861cXgyvsqkpdsTXKSnS4729boXZvZyH")
+        .await?
+        .text()
+        .await?;
+ 
+    let deserialized_manifest_data: SubgraphManifest = serde_yaml::from_str(&manifest_response).unwrap();
+    
+    let schema_hash = deserialized_manifest_data.schema.file.get("/").unwrap();
+    
+    let subgraph_schema_url = format!("https://ipfs.io{}", schema_hash);
+    
+    let schema_response = reqwest::get(subgraph_schema_url)
         .await?
         .text()
         .await?;
     
-    let deserialized_manifest_data: Yml = serde_yaml::from_str(&resp).unwrap();
+    let ast = parse_schema::<String>(&schema_response)?.to_owned();
+    
+    for def in ast.definitions {
+        match def {
+            TypeDefinition(Scalar(s)) => println!("{}: {:?}", s.name, s.description),
+            TypeDefinition(Object(o)) => println!("{}: {:?}", o.name, o.description),
+            TypeDefinition(Interface(i)) => println!("{}: {:?}", i.name, i.description),
+            TypeDefinition(Union(u)) => println!("{}: {:?}", u.name, u.description),
+            TypeDefinition(Enum(e)) => println!("{}: {:?}", e.name, e.description),
+            TypeDefinition(InputObject(io)) => println!("{}: {:?}", io.name, io.description),
+            _ => todo!(),
+        }
+    }
 
-    println!("{:#?}", deserialized_manifest_data);
+    
     Ok(())
 }
-
