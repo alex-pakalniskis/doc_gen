@@ -26,19 +26,28 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .await?;
     
     let ast = parse_schema::<String>(&schema_response)?.to_owned();
-    
+
+    let mut names: Vec<String> = Vec::new();
+    let mut descriptions: Vec<Option<String>> = Vec::new();
+
     for def in ast.definitions {
         match def {
             TypeDefinition(Scalar(s)) => println!("{}: {:?}", s.name, s.description),
-            TypeDefinition(Object(o)) => println!("{}: {:?}", o.name, o.description),
+            TypeDefinition(Object(o)) => {
+                names.push(o.name);
+                descriptions.push(o.description)
+
+            },
             TypeDefinition(Interface(i)) => println!("{}: {:?}", i.name, i.description),
             TypeDefinition(Union(u)) => println!("{}: {:?}", u.name, u.description),
-            TypeDefinition(Enum(e)) => println!("{}: {:?}", e.name, e.description),
+            TypeDefinition(Enum(e)) => descriptions.push(e.description),
             TypeDefinition(InputObject(io)) => println!("{}: {:?}", io.name, io.description),
             _ => todo!(),
         }
     }
 
-    
+    println!("{:?}\n", names);
+    println!("{:?}\n", descriptions);
+
     Ok(())
 }
