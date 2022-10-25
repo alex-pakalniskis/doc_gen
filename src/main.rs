@@ -8,8 +8,16 @@ use graphql_parser::schema::Definition::TypeDefinition;
 use graphql_parser::schema::TypeDefinition::{Scalar, Object, Interface, Union, Enum, InputObject};
 use graphql_parser::query::Directive;
 use graphql_parser::query::Value;
+use graphql_parser::schema::Type::NamedType;
+use graphql_parser::schema::Type::NonNullType;
+use graphql_parser::schema::InputValue;
+
+
 mod ipfs;
 use ipfs::structs::SubgraphManifest;
+
+
+
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -40,7 +48,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     for def in ast.definitions {
         match def {
-            TypeDefinition(Scalar(s)) => todo!(),
             TypeDefinition(Object(o)) => {
                 let mut tmp_fields: Vec<Field<String>> = Vec::new();
                 let mut tmp_enum_values: Vec<EnumValue<String>> = Vec::new();
@@ -64,24 +71,56 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 });
                 enum_values.push(tmp_enum_values);
             },
-            TypeDefinition(Interface(i)) => todo!(),
-            TypeDefinition(Union(u)) => todo!(),
+
             TypeDefinition(Enum(e)) => {
                 let mut tmp_fields: Vec<Field<String>> = Vec::new();
                 let mut tmp_enum_values: Vec<EnumValue<String>> = Vec::new();
                 names.push(e.name);
                 descriptions.push(e.description);
-                // tmp_fields.push("None"); //broken
-                // fields.push(tmp_fields);
+                tmp_fields.push(Field {
+                    position: Pos{line:0,column:0},
+                    description: None,
+                    name: "None".to_string(),
+                    arguments: vec![
+                        InputValue {
+                            position: Pos{line:0,column:0},
+                            description: None,
+                            name: "None".to_string(),
+                            value_type: NonNullType(Box::new(NamedType("N/A".to_string()))),
+                            default_value: None,
+                            directives: vec![
+                                Directive {
+                                    position: Pos{line:0,column:0},
+                                    name: "None".to_string(),
+                                    arguments: vec![("None".to_string(), Value::Null)],
+                                }
+                            ]
+                        }
+                    ],
+                    field_type: NonNullType(Box::new(NamedType("N/A".to_string()))),
+                    directives: vec![
+                        Directive {
+                            position: Pos{line:0,column:0},
+                            name: "None".to_string(),
+                            arguments: vec![("None".to_string(), Value::Null)],
+                        }
+                    ]
+                });
+                fields.push(tmp_fields);
                 for value in e.values {
                     tmp_enum_values.push(value)
                 }
                 enum_values.push(tmp_enum_values);
             },
+            
+            TypeDefinition(Interface(i)) => todo!(),
+            TypeDefinition(Union(u)) => todo!(),
+            TypeDefinition(Scalar(s)) => todo!(),
             TypeDefinition(InputObject(io)) => todo!(),
-            _ => todo!(),
+            _ => todo!()            
         }
     }
+
 
     println!("{:?}\n", names);
     println!("{:?}\n\n", names.len());
